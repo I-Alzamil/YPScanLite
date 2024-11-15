@@ -58,23 +58,64 @@ fn header(color: bool) {
     }
 }
 
-fn display_header_and_set_color(color: bool){
+fn setup_display() {
+
     // check if these arguments are set so we don't display header and color
     let args: Vec<String> = env::args().collect();
+
+    // Check if special output is selected to disable header display
     if args.contains(&"--json-output".to_string()) || args.contains(&"--no-output".to_string()) || args.contains(&"--csv-output".to_string()) {
+        // Check if color is disabled
+        if args.contains(&"--no-color".to_string()) {
+            // Set logger color and progress option
+            let mut lock = LOGGER.write().unwrap();
+            lock.set_color(false);
+            drop(lock);
+        }
+        // return and don't display header
         return;
     }
 
-    // Set logger color
+    let mut color: bool;
+    let mut progress: bool = true;
+
+    // Try to enable ansi support
+    match enable_ansi_support::enable_ansi_support() {
+        Ok(_) => {
+            // ANSI escape codes were successfully enabled, or this is a non-Windows platform.
+            color = true;
+        }
+        Err(_) => {
+            // The operation was unsuccessful, typically because it's running on an older
+            // version of Windows. The program may choose to disable ANSI color code output in
+            // this case.
+            color = false;
+        }
+    }
+
+    // Check if we are not in tty
+    if !std::io::stdout().is_terminal() {
+        // Disable color
+        color = false;
+        // Disable progress
+        progress = false;
+    }
+
+    if args.contains(&"--no-color".to_string()) {
+        color = false;
+    }
+
+    // Set logger color and progress option
     let mut lock = LOGGER.write().unwrap();
     lock.set_color(color);
+    lock.set_logprogress(progress);
     drop(lock);
     
     // Display header
     header(color);
 }
 
-fn initialize(){
+fn setup_logger() {
     // Check all logger related arguments and modify logger for each change
     if ARGS.get_flag("debug") {
         let mut lock = LOGGER.write().unwrap();
@@ -126,6 +167,12 @@ fn initialize(){
         lock.set_ansi(true);
         drop(lock);
     }
+}
+
+fn initialize(){
+    // Setup logger variables
+    setup_logger();
+    // Check which program is selected
     match &ARGS.subcommand_name() {
         Some("scan") => initialize_scan(),
         Some("encrypt") => initialize_encrypt(),
@@ -139,44 +186,8 @@ fn initialize(){
 }
 
 fn main() {
-    let mut color: bool;
-    
-    // Try to enable ansi support
-    match enable_ansi_support::enable_ansi_support() {
-        Ok(_) => {
-            // ANSI escape codes were successfully enabled, or this is a non-Windows platform.
-            color = true;
-        }
-        Err(_) => {
-            // The operation was unsuccessful, typically because it's running on an older
-            // version of Windows. The program may choose to disable ANSI color code output in
-            // this case.
-            color = false;
-        }
-    }
-    
-    // Check if we are not in tty
-    if !std::io::stdout().is_terminal() {
-        // Disable color
-        color = false;
-        // Disable progress
-        let mut lock = LOGGER.write().unwrap();
-        lock.set_logprogress(false);
-        drop(lock);
-    }
-
-    // Check if color is disabled
-    let args: Vec<String> = env::args().collect();
-    if args.contains(&"--no-color".to_string()) {
-        color = false;
-    }
-
-    // Save color settings and display header
-    display_header_and_set_color(color);
-
-    // Drop variables to save bits of memory #worth
-    let _ = args;
-    let _ = color;
+    // Setup display settings before displaying header
+    setup_display();
 
     // Start clap and parse arguments
     initialize();

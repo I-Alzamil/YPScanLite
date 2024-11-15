@@ -3,6 +3,8 @@ use clap::ArgMatches;
 
 use crate::VERSION;
 
+use super::statics::LOGGER;
+
 // Styling and colors
 pub const CLAP_STYLING: clap::builder::styling::Styles = clap::builder::styling::Styles::styled()
     .header(clap_cargo::style::HEADER)
@@ -15,8 +17,20 @@ pub const CLAP_STYLING: clap::builder::styling::Styles = clap::builder::styling:
 
 // Main args variable
 pub static ARGS: LazyLock<ArgMatches> = LazyLock::new(||{
+    // Check if color is disabled and if so, do the same in clap
+    let color_choice: clap::ColorChoice;
+
+    let lock = LOGGER.read().unwrap();
+    if lock.get_color() {
+        color_choice = clap::ColorChoice::Auto;
+    } else {
+        color_choice = clap::ColorChoice::Never;
+    }
+    drop(lock);
+
     let cmd = clap::Command::new("YPScan")
         .version(VERSION)
+        .color(color_choice)
         .bin_name("YPScan")
         .styles(CLAP_STYLING)
         .arg(

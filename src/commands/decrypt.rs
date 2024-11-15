@@ -1,5 +1,6 @@
 use std::{
     fs::File,
+    ffi::OsStr,
     process::exit,
     io::{
         BufRead,
@@ -26,7 +27,8 @@ use crate::{
 use walkdir::WalkDir;
 
 pub fn initialize_decrypt(){
-    let args = &ARGS.subcommand_matches("decrypt").unwrap();
+    
+    let args = ARGS.subcommand_matches("decrypt").unwrap();
 
     if let Some(path) = args.get_one::<String>("file") {
         let mut counter = 0;
@@ -43,43 +45,45 @@ pub fn initialize_decrypt(){
             };
             // Only encrypt if entry is a file
             if entry.file_type().is_file() {
-                // Check if file is yar or ioc file
-                let extention = Path::new(entry.path()).extension().unwrap();
+                // Gather metadata about the file
+                let filename = entry.file_name().to_str().unwrap_or("N/A");
+                let extention = entry.path().extension().unwrap_or(OsStr::new("N/A"));
                 // Check if user provided output flag
                 let mut new_path: PathBuf;
                 if let Some(path) = args.get_one::<String>("output-path") {
                     let tmp_path = Path::new(path);
                     new_path = tmp_path.join(entry.file_name());
                 } else {
-                    new_path = PathBuf::from(entry.clone().into_path());
+                    new_path = entry.clone().into_path();
                 }
-                // Read file and try to encrypt them
-                if extention == "eyar"{
+                // Check if file is yar or ioc file
+                if extention == "eyar" {
                     new_path.set_extension("yar");
                 } else if extention == "eioc" {
                     new_path.set_extension("ioc");
                 } else if extention == "ecfg" {
                     new_path.set_extension("cfg");
                 } else {
-                    LOGDEBUG!("File {} not recognized",entry.file_name().to_str().unwrap());
+                    LOGDEBUG!("File {} not recognized",filename);
                     continue;
                 }
+                // Read file and try to encrypt it
                 let in_file = BufReader::new(File::open(entry.path()).unwrap());
                 let out_file = BufWriter::new(File::create(new_path).unwrap());
                 match decrypt_file_to_file_buffered(in_file,out_file) {
                     Ok(_) => {
-                        LOGSUCCESS!("Decrypted file {}",entry.file_name().to_str().unwrap());
+                        LOGSUCCESS!("Decrypted file {}",filename);
                         counter += 1;
                     }
                     Err(e) => {
-                        LOGERROR!("Unable to decrypt file {} due to {}",entry.file_name().to_str().unwrap(),e);
+                        LOGERROR!("Unable to decrypt file {} due to {}",filename,e);
                     }
                 }
             }
         }
 
         if counter == 0 {
-            LOGFATAL!("Unable to find a valid ioc or yara file to decrypt");
+            LOGFATAL!("Unable to find a valid yara or ioc or config file to decrypt");
             exit(3001);
         } else {
             LOGSUCCESS!("Successfully decrypted {} files",counter);

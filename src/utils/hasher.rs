@@ -28,6 +28,6 @@ pub fn hash_all(
         sha256_hasher.update(&buffer[..bytes_read]);
     }
 
-    // Finalize the hash and get the result as a string
+    // Finalize the hash and get the result as an array of strings
     Ok([ format!("{:x}",md5_hasher.compute()) , format!("{:x}",sha1_hasher.finalize()) , format!("{:x}",sha256_hasher.finalize()) ])
 }

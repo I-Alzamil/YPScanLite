@@ -66,13 +66,19 @@ pub fn initialize_filescan(
     // Setup disk queue which is used incase in-memory queue gets full
     let tempfile = std::env::temp_dir().join("ypsqueue.db");
     if tempfile.exists() {
-        LOGNOTICE!("It appears last scan exited unsucessfully, resetting...");
+        LOGNOTICE!("It appears last scan exited unsucessfully, attempting reset");
         match std::fs::remove_file(tempfile.as_path()) {
-            Ok(_) => LOGTRACE!("Sucessfully remove old temp file"),
+            Ok(_) => LOGNOTICE!("Successful reset"),
             Err(e) => LOGERROR!("Unable to delete temp file due to {}, reset failed",e),
         }
     }
-    let mut disk_queue = QueueFile::open(tempfile.as_path()).expect("Unable to create disk queue file");
+    let mut disk_queue = match QueueFile::open(tempfile.as_path()) {
+        Ok(valid_queue) => valid_queue,
+        Err(e) => {
+            LOGFATAL!("Failed to create disk queue due to {e}");
+            exit(1004)
+        }
+    };
     disk_queue.set_sync_writes(false);
 
     // Get list of paths to scan
@@ -532,13 +538,12 @@ fn get_file_signature(entry: &Path) -> String {
         Ok(valid_verfiy) => {
             match valid_verfiy.verify() {
                 Ok(valid_context) => format!("{}",valid_context.subject_name().common_name.unwrap_or("N/A".to_string())),
+                Err(codesign_verify::Error::Unsigned) => {
+                    format!("Unsigned")
+                }
                 Err(e) => {
-                    let error = format!("{:?}",e);
-                    if error.starts_with("IoError") {
-                        format!("Unsigned")
-                    } else {
-                        error
-                    }
+                    LOGDEBUG!("failed to get certificate for {} due to {:?}",entry.display(),e);
+                    format!("IOError")
                 }
             }
         }

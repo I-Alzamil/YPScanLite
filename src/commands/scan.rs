@@ -17,11 +17,6 @@ use std::{
     }
 };
 
-use crate::utils::statics::{
-    LOGGER,
-    MY_PATH
-};
-
 use crate::{
     KEY,
     ARGS,
@@ -30,7 +25,11 @@ use crate::{
     LOGNOTICE,
     LOGWARN,
     LOGERROR,
-    modules::filescan::initialize_filescan
+    modules::filescan::initialize_filescan,
+    utils::statics::{
+        LOGGER,
+        MY_PATH
+    },
 };
 
 use regex::{
@@ -41,18 +40,32 @@ use regex::{
 use walkdir::WalkDir;
 use yara_x::Rules;
 
-pub fn initialize_scan() {
+fn check_arguments_and_display_info() {
     
     let args = ARGS.subcommand_matches("scan").unwrap();
 
-    LOGINFO!("Starting File Scan");
+    let size_message: String;
+
+    if let Some(size) = args.get_one::<u64>("size") {
+        size_message = format!("File size limit set to {} KB",size);
+    } else if args.get_flag("no-size") {
+        size_message = format!("File size limit is removed");
+    } else {
+        size_message = format!("Default file size limit set to 150 MB");
+    }
+
     if let Some(path) = args.get_one::<String>("path") {
-        LOGINFO!("Scanning {}", path);
+        LOGINFO!("Scanning {}",path);
     } else {
         LOGINFO!("Scanning all drives (Excluding removable and share)");
     }
 
-    let _ = args;
+    LOGINFO!("{}",size_message);
+}
+
+pub fn initialize_scan() {
+    
+    check_arguments_and_display_info();
 
     let rules = load_yara_files(Path::new("yara"));
     let malware_hashes = load_malware_hashes(Path::new("iocs"));

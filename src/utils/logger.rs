@@ -11,7 +11,6 @@ use std::{
 use owo_colors::OwoColorize;
 
 use crate::utils::statics::{
-    LOGGER,
     MY_PATH,
     DATETIME,
     HOSTNAME
@@ -820,21 +819,7 @@ impl Logger {
     pub fn set_ansi(&mut self,ansi: bool){
         self.ansiencoding = ansi;
     }
-}
-
-fn _test_logger(){
-    LOGTRACE!("test trace");
-    LOGDEBUG!("test debug");
-    LOGINFO!("test info");
-    LOGSUCCESS!("test success");
-    LOGRESULT!(clean: true,"test result");
-    LOGNOTICE!("test notice");
-    LOGWARN!("test warn");
-    LOGALERT!("test alert");
-    LOGERROR!("test error");
-    LOGFATAL!("test fatal");
-    CREATEPROGRESS!(100);
-    INCLENGTHPROGRESS!(1);
-    INCPROGRESS!(1);
-    DELETEPROGRESS!();
+    pub fn get_color(&self) -> bool {
+        self.color
+    }
 }

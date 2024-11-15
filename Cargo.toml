@@ -1,6 +1,6 @@
 [package]
 name = "YPScanLite"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [dependencies]
@@ -21,7 +21,7 @@ sha2 = "0.10"
 clap = { version = "4.5", features = ["cargo"]}
 clap-cargo = "0.14"
 local-encoding = "0.2"
-queue-file = "1"
+queue-file = "1.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 codesign-verify = "0.1"
