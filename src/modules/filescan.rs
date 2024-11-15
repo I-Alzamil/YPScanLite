@@ -439,6 +439,10 @@ pub fn initialize_filescan(
                 match item {
                     None => {
                         LOGTRACE!("Disk queue file is now empty and the process of dequeuing is done");
+                        match std::fs::remove_file(tempfile.as_path()) {
+                            Ok(_) => LOGTRACE!("Sucessfully remove temp file"),
+                            Err(e) => LOGERROR!("Unable to delete temp file due to {}",e),
+                        }
                         break;
                     }
                     Some(bytes) => {
